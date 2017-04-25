@@ -1,0 +1,187 @@
+#!/bin/sh
+
+graph=0
+narg=0
+iarg=0
+i=0
+saveFlag=0
+
+#if signal received
+sigint(){ rm tempFile.txt; exit 1; }
+sigusr1(){ echo $min; }
+sigusr2(){
+echo "$orgMin" > beetle.state;
+echo "$min" >> beetle.state;
+echo "$max" >> beetle.state;
+echo "$step" >> beetle.state;
+echo "$graph" >> beetle.state;
+echo $numberOfBeetles >> beetle.state;
+if [ $graph -eq 1 ]
+then
+  echo "$pngFile" >> beetle.state;
+fi
+readFileToBeetleState;
+rm tempFile.txt
+exit 1;
+}
+
+readFile() {
+exec 3<"tempFile.txt"		# This is an open onto fd 3
+while read -u 3 line		# Reading from fd 3
+do
+  echo "$line"		# Assumes simple line of text 
+done
+exec 3<&-		# This is a close of fd 3
+}
+
+readFileToBeetleState() {
+exec 3<"tempFile.txt"		# This is an open onto fd 3
+while read -u 3 line		# Reading from fd 3
+do
+  echo "$line" >> beetle.state		# Assumes simple line of text
+done
+exec 3<&-		# This is a close of fd 3
+}
+
+restoreFromSaveFile() {
+if [[ -f $stateFile ]]
+then
+exec 3<$stateFile # This is an open onto fd 3
+else
+echo "Please enter a valid file to restore from."
+exit 1
+fi   
+read -u 3 orgMin
+read -u 3 min
+read -u 3 max
+read -u 3 step
+read -u 3 graph
+
+read -u 3 numberOfBeetles
+if [ $graph -eq 1 ]
+then
+  read -u 3 pngFile
+fi
+#put rest of file in tempFile.txt
+while read -u 3 line 
+do
+  echo "$line"	>> tempFile.txt
+done   
+exec 3<&-		# This is a close of fd 3
+}
+
+#count how many args
+for var in "$@"
+do
+  i=$(( i + 1 ))
+done
+
+if [ $1 == "-r" ]
+then
+  stateFile=$2
+  restoreFromSaveFile
+  saveFlag=1
+
+else
+  while [ $i -gt 0 ]
+  do
+    if [ $1 == "-n" ]
+    then
+      numberOfBeetles=$2
+      if [[ "$numberOfBeetles" =~ ^[0-9]+$ ]] ;
+      then
+      narg=1
+      fi
+    elif [ $1 == "-i" ] 
+    then
+      min=$2
+      max=$3
+      step=$4
+      if [[ "$min" =~ ^[0-9]+$ ]] ; then
+      if [[ "$max" =~ ^[0-9]+$ ]] ; then
+        if [[ "$step" =~ ^[0-9]+$ ]] ; then
+	     iarg=1
+	       fi
+	       fi
+      fi
+    elif [ $1 == "-p" ]
+    then
+      pngFile=$2
+      graph=1
+    #invalid non number
+	else 
+      if ! [[ "$1" =~ ^[0-9]+$ ]] ; then
+      if [ $graph -eq 0 ]
+        then
+	  echo Please enter valid arguments
+	    exit 1
+	    fi
+      fi
+    fi
+  shift
+  i=$(( i - 1 ))
+  done
+
+
+  if [ $narg -eq 0 -o $iarg -eq 0 ]
+  then
+    echo Please enter valid arguments
+    exit 1
+  fi
+  orgMin=$min
+fi
+#if sig int caught, remove temp file
+trap  sigint 2
+
+while [ true ]
+do
+
+  #if sig usr1 caught
+  trap sigusr1 10
+
+   #trap sigusr2
+  trap sigusr2 12
+
+  result=$(/home/f85/kearns/public/415/p6/beetle $min $numberOfBeetles)
+  trap sigusr1 10
+  trap sigusr2 12
+
+  #set mean var to last word in result
+  for var in $result
+  do
+    mean=$var
+  done
+  
+ 
+  
+  #echo writing min mean $min $mean
+  #add values to temp file
+  echo "$min $mean" >> tempFile.txt
+
+  min=$(( min + step ))
+
+  if [ $min -gt $max ] 
+  then
+    break
+  fi
+  
+done
+
+#print contents
+readFile
+
+#plot the points from the file
+if [ $graph -eq 1 ]
+then
+  gnuplot << EOF
+  set terminal png
+  set output '$pngFile'
+  unset key
+  set xlabel "Square Side (inches)"
+  set ylabel "Mean Beetle Lifetime (seconds)"
+  plot "tempFile.txt"
+EOF
+fi
+
+#remove the temp file
+rm tempFile.txt
