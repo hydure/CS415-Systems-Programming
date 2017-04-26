@@ -1,18 +1,18 @@
 CC=gcc
 CFLAGS=-g -Wall
 
-all:	TTT ttt
+all:	TTTS ttt
 
-TTT:	TTT.o msg.o
-	gcc -o TTT TTT.o msg.c
+TTT:	TTTS.o msg.o
+	gcc -o TTT TTTS.o msg.c
 
 ttt:	ttt.o msg.o
 	gcc -o ttt ttt.o child.c msg.c
 
 
-TTT.o:	TTT.c common.h
+TTT.o:	TTTS.c common.h
 
 ttt.o:	ttt.c common.h
 
 clean:
-	rm -f *.o ttt TTT serverloc
+	rm -f *.o ttt TTTS serverloc
