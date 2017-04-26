@@ -1,0 +1,24 @@
+#!/bin/sh
+
+# after doing a
+#  cp -a ~kearns/public/415/P3/pgm3test.d .
+# run ./script to set access times
+#
+# ./script should be run before every test to
+# reset access times to well-known values
+
+OLD='2005-01-01'
+NEW='yesterday'
+
+TOUCH=/usr/bin/touch
+
+#give a.out current access time
+$TOUCH  --time=access ./a.out
+
+# give fileinfo.c access time of Jan 1, 2005
+$TOUCH  --time=access --date=$OLD ./fileinfo.c
+
+# subdir/subsubdir files given staggered access times
+$TOUCH  --time=access --date=$OLD ./subdir/subsubdir/file1
+$TOUCH  --time=access --date=$NEW ./subdir/subsubdir/file2
+$TOUCH  --time=access --date=$NEW ./subdir/subsubdir/file3
