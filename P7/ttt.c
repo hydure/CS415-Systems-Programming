@@ -5,7 +5,7 @@
  * 
  * Phil Kearns
  * April 12, 1998
- * Modified March 2014
+ * Modified April 2017 By Colin Lightfoot
  ************************************************************************/
 
 #include "common.h"
